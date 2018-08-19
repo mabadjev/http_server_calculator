@@ -24,26 +24,6 @@ type Answer struct {
 	timeout   *time.Timer
 }
 
-//Specify JSON serialization for our answer
-
-func (u *Answer) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		ID       int64  `json:"id"`
-		Name     string `json:"name"`
-		LastSeen int64  `json:"lastSeen"`
-		Action    string  `json:"action"`
-		X         float64 `json:"x"`
-		Y         float64 `json:"y"`
-		Answer    float64 `json:"answer"`
-		Cached    bool    `json:"cached"`
-		ErrorName error   `json:"error,omitempty"`
-	}{
-		ID:       u.ID,
-		Name:     u.Name,
-		LastSeen: u.LastSeen.Unix(),
-	})
-}
-
 //Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
 //According to documentation sync.Map is optimized for performance when many reads may be done on a map that is relatively static
 //This is generally what occurs with the syncmap during a high volume of requests
@@ -62,7 +42,7 @@ var CalcMathError error = errors.New("Nonnumber math answer")
 const cacheDur = time.Minute
 
 //
-type MarshalledError error 
+type MarshalledError error
 
 type DoMath func(float64, float64) (float64, error)
 
