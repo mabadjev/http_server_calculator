@@ -24,6 +24,7 @@ type Answer struct {
 	timeout   *time.Timer
 }
 
+//Custom marshaller to ensure that errors are passed to JSON as strings
 func (u Answer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Action    string  `json:"action"`
@@ -44,24 +45,22 @@ func (u Answer) MarshalJSON() ([]byte, error) {
 
 //Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
 //According to documentation sync.Map is optimized for performance when many reads may be done on a map that is relatively static
-//This is generally what occurs with the syncmap during a high volume of requests
+//This is generally what occurs with the syncmap during a high volume of requests to the server
 
 //Map of URI: Answer or key: value  request: answer to return
 //intended for [URI]Answer
 var responseMap sync.Map
 
-//Static string representing malformed request used
+//Error representing malformed request used
 var CalcRequestError error = errors.New("Malformed calculator request")
 
-//Static string representing a math error EG div by zero
+//Error representing a math error EG div by zero
 var CalcMathError error = errors.New("Nonnumber math answer")
 
-//Static integer representing duration before cache timeout in ms
+//Static integer representing duration before cache timeout
 const cacheDur = time.Minute
 
-//
-type MarshalledError error
-
+//Represents a generic math function
 type DoMath func(float64, float64) (float64, error)
 
 //Grabs the arguments from the query
@@ -69,6 +68,7 @@ type DoMath func(float64, float64) (float64, error)
 //output arguments or error if error is encountered
 func extractArgs(v url.Values) (float64, float64, error) {
 
+	//error when arguments absent
 	rawx := v.Get("x")
 
 	if len(rawx) == 0 {
@@ -81,6 +81,7 @@ func extractArgs(v url.Values) (float64, float64, error) {
 		return -999, -999, CalcRequestError
 	}
 
+	//error when arguments dont appear to be floats
 	x, err := strconv.ParseFloat(rawx, 64)
 	if err != nil {
 		return -999, -999, CalcRequestError
@@ -95,8 +96,8 @@ func extractArgs(v url.Values) (float64, float64, error) {
 
 }
 
-//Returns json containing completed operation or error response if appropriate
-//inputs: URL of request
+//Returns json containing completed answer or error response if appropriate
+//inputs: URL of request, math function
 //outputs: Answer struct with processed request
 func assembleAnswer(u url.URL, math DoMath) Answer {
 
@@ -166,9 +167,9 @@ func resetTimeout(u url.URL) {
 }
 
 //Generates handler for requests on the given port
-//inputs: automatically gets responsewriter and request and math command
+//inputs: automatically gets responsewriter and request, pass in math command
 //outputs: handler function for handling requests
-//Used as a closure to generate the appropriate
+//Used as a closure to generate the appropriate handler
 
 func handleCall(mathF DoMath) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -256,6 +257,8 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(portStr, nil))
 }
+
+//various sample math functions
 
 func AddFunc(x float64, y float64) (float64, error) { return x + y, nil }
 
