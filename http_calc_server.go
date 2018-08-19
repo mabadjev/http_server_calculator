@@ -24,6 +24,24 @@ type Answer struct {
 	timeout   *time.Timer
 }
 
+func (a *Answer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Action    string  `json:"action"`
+		X         float64 `json:"x"`
+		Y         float64 `json:"y"`
+		Answer    float64 `json:"answer"`
+		Cached    bool    `json:"cached"`
+		ErrorName string  `json:"error,omitempty"`
+	}{
+		Action:    a.Action,
+		X:         a.X,
+		Y:         a.Y,
+		Answer:    a.Answer,
+		Cached:    a.Cached,
+		ErrorName: a.ErrorName.Error(),
+	})
+}
+
 //Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
 //According to documentation sync.Map is optimized for performance when many reads may be done on a map that is relatively static
 //This is generally what occurs with the syncmap during a high volume of requests
