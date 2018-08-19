@@ -24,7 +24,7 @@ type Answer struct {
 	timeout   *time.Timer
 }
 
-func (a *Answer) MarshalJSON() ([]byte, error) {
+func (u Answer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Action    string  `json:"action"`
 		X         float64 `json:"x"`
@@ -33,12 +33,12 @@ func (a *Answer) MarshalJSON() ([]byte, error) {
 		Cached    bool    `json:"cached"`
 		ErrorName string  `json:"error,omitempty"`
 	}{
-		Action:    a.Action,
-		X:         a.X,
-		Y:         a.Y,
-		Answer:    a.Answer,
-		Cached:    a.Cached,
-		ErrorName: a.ErrorName.Error(),
+		Action:    u.Action,
+		X:         u.X,
+		Y:         u.Y,
+		Answer:    u.Answer,
+		Cached:    u.Cached,
+		ErrorName: u.ErrorName.Error(),
 	})
 }
 
