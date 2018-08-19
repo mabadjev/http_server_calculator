@@ -26,21 +26,29 @@ type Answer struct {
 
 //Custom marshaller to ensure that errors are passed to JSON as strings
 func (u Answer) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Action    string  `json:"action"`
-		X         float64 `json:"x"`
-		Y         float64 `json:"y"`
-		Answer    float64 `json:"answer"`
-		Cached    bool    `json:"cached"`
-		ErrorName string  `json:"error,omitempty"`
-	}{
-		Action:    u.Action,
-		X:         u.X,
-		Y:         u.Y,
-		Answer:    u.Answer,
-		Cached:    u.Cached,
-		ErrorName: u.ErrorName.Error(),
-	})
+
+	type Alias Answer
+
+	if u.ErrorName == nil {
+
+		return json.Marshal(&struct {
+			*Alias
+			ErrorName error `json:"-"`
+		}{
+			ErrorName: u.ErrorName,
+			Alias:     (*Alias)(&u),
+		})
+
+	} else {
+		return json.Marshal(&struct {
+			*Alias
+			ErrorName string `json:"error,omitempty"`
+		}{
+			ErrorName: u.ErrorName.Error(),
+			Alias:     (*Alias)(&u),
+		})
+	}
+
 }
 
 //Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
