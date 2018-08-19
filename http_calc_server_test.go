@@ -71,3 +71,91 @@ func TestCalculatorAdd(t *testing.T) {
 	}
 
 }
+
+func TestCalculatorSubtract(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/subtract?x=4.2&y=2", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(handleCall(SubFunc))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := `{"action":"subtract","x":4.2,"y":2,"answer":2.2,"cached":false}`
+
+	if rr.Body.String() != expected {
+
+		t.Errorf("Did not receive expected result: got %s expected %s", rr.Body.String(), expected)
+
+	}
+
+}
+
+func TestCalculatorMultiply(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/multiply?x=3&y=5", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(handleCall(MultFunc))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := `{"action":"multiply","x":3,"y":5,"answer":15,"cached":false}`
+
+	if rr.Body.String() != expected {
+
+		t.Errorf("Did not receive expected result: got %s expected %s", rr.Body.String(), expected)
+
+	}
+
+}
+
+func TestCalculatorBadDivide(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/divide?x=6&y=0", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(handleCall(DiviFunc))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := `{"action":"divide","x":0,"y":0,"answer":0,"cached":false,"error":"Nonnumber math answer"}`
+
+	if rr.Body.String() != expected {
+
+		t.Errorf("Did not receive expected result: got %s expected %s", rr.Body.String(), expected)
+
+	}
+
+}
+
+func TestCalculatorDivide(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/divide?x=6&y=2", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(handleCall(DiviFunc))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := `{"action":"divide","x":6,"y":2,"answer":3,"cached":false}`
+
+	if rr.Body.String() != expected {
+
+		t.Errorf("Did not receive expected result: got %s expected %s", rr.Body.String(), expected)
+
+	}
+
+}
