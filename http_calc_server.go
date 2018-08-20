@@ -23,13 +23,45 @@ type Answer struct {
 	timeout *time.Timer
 }
 
-//Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
-//According to documentation sync.Map is optimized for performance when many reads may be done on a map that is relatively static
-//This is generally what occurs with the syncmap during a high volume of requests to the server
-
 //Map of URI: Answer or key: value  request: answer to return
 //intended for [URI]Answer
-var responseMap sync.Map
+
+type cacheSet struct {
+	responseMap  map[string]*Answer
+	responseLock sync.RWMutex
+}
+
+var currCache cacheSet
+
+//Delete from given cacheSet
+func (c *cacheSet) cacheDelete(s string) {
+
+	c.responseLock.Lock()
+	delete(c.responseMap, s)
+	c.responseLock.Unlock()
+
+}
+
+//Load from given cacheSet
+func (c *cacheSet) cacheLoad(s string) (*Answer, bool) {
+
+	c.responseLock.RLock()
+	a := c.responseMap[s]
+	c.responseLock.RUnlock()
+	if a == nil {
+		return nil, false
+	} else {
+		return a, true
+	}
+}
+
+//Store to given cacheSet
+func (c *cacheSet) cacheStore(s string, a *Answer) {
+
+	c.responseLock.Lock()
+	c.responseMap[s] = a
+	c.responseLock.Unlock()
+}
 
 //Error representing malformed request used
 var CalcRequestError error = errors.New("Malformed calculator request")
@@ -114,7 +146,8 @@ func assembleAnswer(u url.URL, math DoMath) (Answer, error) {
 func makeTimeout(u url.URL) func() {
 
 	return func() {
-		responseMap.Delete(u.RequestURI())
+
+		currCache.cacheDelete(u.RequestURI())
 	}
 }
 
@@ -122,14 +155,12 @@ func makeTimeout(u url.URL) func() {
 func resetTimeout(u url.URL) {
 
 	//lookup the associated Answer
-	aa, ok := responseMap.Load(u.RequestURI())
+	a, ok := currCache.cacheLoad(u.RequestURI())
 
 	//if we somehow miss, we raced and its already removed. In this case, let it go
 	if ok == false {
 		return
 	}
-
-	a := aa.(*Answer)
 
 	t := a.timeout
 
@@ -158,12 +189,10 @@ func handleCall(mathF DoMath) func(w http.ResponseWriter, req *http.Request) {
 
 		u := req.URL
 
-		ii, ok := responseMap.Load(u.RequestURI())
+		i, ok := currCache.cacheLoad(u.RequestURI())
 
 		//if ok true, we had a hit in cache
 		if ok == true {
-
-			i := ii.(*Answer)
 
 			j, err := json.Marshal(i)
 			if err != nil {
@@ -201,9 +230,15 @@ func handleCall(mathF DoMath) func(w http.ResponseWriter, req *http.Request) {
 			a.Cached = true
 
 			//Cache answer and end handler
-			responseMap.Store(u.RequestURI(), &a)
+			currCache.cacheStore(u.RequestURI(), &a)
 		}
 	}
+
+}
+
+func init() {
+
+	currCache.responseMap = make(map[string]*Answer)
 
 }
 
