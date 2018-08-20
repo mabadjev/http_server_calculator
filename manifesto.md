@@ -9,7 +9,8 @@ A handler structure that uses a closure to generate appropriate handlers seemed 
 ## sync.Map
 
 sync.Map is a type that needs a very specific set of circumstances to be faster than a normal map with manual locking. It also is unfortunately significantly less type safe than a normal map. However, the use in this server is close to the optimal usecase for a sync.Map . By storing pointers to answer structs we keep the contents of the map relatively static, with the number of reads of the map theoretically significantly outpacing the number of writes for common queries. Entries for keys are almost never written to twice. It'd potentially be worth stress testing both to see which wins out on speed, and going with normal maps and mutexes if it's close.
-Plainly, if not for a few reasons sync.Map would not be worth using
+
+However, once I realized that by using sync.Map I had introduced interface{} to my code without it being strictly necessary and this is made the code less readable and also more apt for mistakes if it were to be expanded, I chose to rewrite it to use a regular map and mutexes. If the application were to be expanded and require the extra speed, it could be done at that time.
 
 ## Errors
 
