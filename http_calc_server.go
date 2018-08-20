@@ -15,40 +15,12 @@ import (
 
 //this object holds our answer and is serialized for our response
 type Answer struct {
-	Action    string  `json:"action"`
-	X         float64 `json:"x"`
-	Y         float64 `json:"y"`
-	Answer    float64 `json:"answer"`
-	Cached    bool    `json:"cached"`
-	ErrorName error   `json:"error,omitempty"`
-	timeout   *time.Timer
-}
-
-//Custom marshaller to ensure that errors are passed to JSON as strings
-func (u Answer) MarshalJSON() ([]byte, error) {
-
-	type Alias Answer
-
-	if u.ErrorName == nil {
-
-		return json.Marshal(&struct {
-			*Alias
-			ErrorName error `json:"-"`
-		}{
-			ErrorName: u.ErrorName,
-			Alias:     (*Alias)(&u),
-		})
-
-	} else {
-		return json.Marshal(&struct {
-			*Alias
-			ErrorName string `json:"error,omitempty"`
-		}{
-			ErrorName: u.ErrorName.Error(),
-			Alias:     (*Alias)(&u),
-		})
-	}
-
+	Action  string  `json:"action"`
+	X       float64 `json:"x"`
+	Y       float64 `json:"y"`
+	Answer  float64 `json:"answer"`
+	Cached  bool    `json:"cached"`
+	timeout *time.Timer
 }
 
 //Using synchronous map to avoid having to use ReadWriteMutex in conjunction with a map to avoid contention during high volume of requests
@@ -107,7 +79,7 @@ func extractArgs(v url.Values) (float64, float64, error) {
 //Returns json containing completed answer or error response if appropriate
 //inputs: URL of request, math function
 //outputs: Answer struct with processed request
-func assembleAnswer(u url.URL, math DoMath) Answer {
+func assembleAnswer(u url.URL, math DoMath) (Answer, error) {
 
 	v := u.Query()
 	opp := u.Path
@@ -122,19 +94,19 @@ func assembleAnswer(u url.URL, math DoMath) Answer {
 	x, y, err := extractArgs(v)
 	if err != nil {
 
-		a := Answer{op, 0, 0, 0, false, err, tnew}
-		return a
+		a := Answer{op, 0, 0, 0, false, tnew}
+		return a, err
 
 	}
 
 	result, err := math(x, y)
 	if err != nil {
-		a := Answer{op, 0, 0, 0, false, err, tnew}
-		return a
+		a := Answer{op, 0, 0, 0, false, tnew}
+		return a, err
 	}
 
-	a := Answer{op, x, y, result, false, nil, tnew}
-	return a
+	a := Answer{op, x, y, result, false, tnew}
+	return a, nil
 
 }
 
@@ -208,7 +180,12 @@ func handleCall(mathF DoMath) func(w http.ResponseWriter, req *http.Request) {
 
 		} else {
 			//Didn't hit in cache, so perform the operation and cache result
-			a := assembleAnswer(*u, mathF)
+			a, err := assembleAnswer(*u, mathF)
+			if err != nil {
+				w.Header().Set("Content-Type", "text/plain")
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
 			j, err := json.Marshal(a)
 			if err != nil {

@@ -19,7 +19,7 @@ func TestMissing(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	expected := `{"action":"add","x":0,"y":0,"answer":0,"cached":false,"error":"Malformed calculator request"}`
+	expected := `Malformed calculator request` + "\n"
 
 	if rr.Body.String() != expected {
 
@@ -41,7 +41,7 @@ func TestBadInput(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	expected := `{"action":"add","x":0,"y":0,"answer":0,"cached":false,"error":"Malformed calculator request"}`
+	expected := `Malformed calculator request` + "\n"
 
 	if rr.Body.String() != expected {
 
@@ -129,7 +129,7 @@ func TestCalculatorBadDivide(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	expected := `{"action":"divide","x":0,"y":0,"answer":0,"cached":false,"error":"Nonnumber math answer"}`
+	expected := `Nonnumber math answer` + "\n"
 
 	if rr.Body.String() != expected {
 
@@ -203,17 +203,17 @@ func TestCacheExpire(t *testing.T) {
 
 	expected1 := `{"action":"divide","x":9,"y":3,"answer":3,"cached":false}`
 
-	time.Sleep(time.Minute+time.Second*5)
+	time.Sleep(time.Minute + time.Second*5)
 	handler.ServeHTTP(rr, req)
 
 	expected2 := `{"action":"divide","x":9,"y":3,"answer":3,"cached":false}`
 
-	time.Sleep(time.Second*5)
+	time.Sleep(time.Second * 5)
 	handler.ServeHTTP(rr, req)
 
 	expected3 := `{"action":"divide","x":9,"y":3,"answer":3,"cached":true}`
 
-	expected := expected1 + expected2+expected3
+	expected := expected1 + expected2 + expected3
 
 	if rr.Body.String() != expected {
 
