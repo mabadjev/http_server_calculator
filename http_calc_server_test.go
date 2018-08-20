@@ -173,9 +173,9 @@ func TestCacheSimple(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	handler.ServeHTTP(rr, req)
-
 	expected1 := `{"action":"divide","x":8,"y":2,"answer":4,"cached":false}`
+
+	handler.ServeHTTP(rr, req)
 
 	expected2 := `{"action":"divide","x":8,"y":2,"answer":4,"cached":true}`
 
